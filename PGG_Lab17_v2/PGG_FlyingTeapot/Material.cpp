@@ -10,6 +10,9 @@
 Material::Material()
 {
 	// Initialise everything here
+	_shaderProgram = 0;
+
+	_shaderInvModelMatLocation = 0;
 	_shaderModelMatLocation = 0;
 	_shaderViewMatLocation = 0;
 	_shaderProjMatLocation = 0;
@@ -23,12 +26,27 @@ Material::Material()
 	//pbr
 	_shaderAlbedoColLocation = 0;
 	_shaderMetallicColLocation = 0;
-	_shaderRoughnessColLocation = 0; 
+	_shaderRoughnessColLocation = 0;
 	_shaderAoColLocation = 0;
+
+	//sampler locations
+	_shaderAlbedoMapSamplerLocation = 0;
+	_shaderAoMapSamplerLocation = 0;
+	_shaderMetallicMapSamplerLocation = 0;
+	_shaderRoughnessMapSamplerLocation = 0;
 
 	_shaderTex1SamplerLocation = 0;
 
+	_ao = 0;
+	_metallic = 0;
+	_roughness = 0;
+	_albedo = glm::vec3(0);
+
 	_texture1 = 0;
+	_albedoMap = 0;
+	_metallicMap = 0;
+	_roughnessMap = 0;
+	_aoMap = 0;
 }
 
 Material::~Material()
@@ -38,85 +56,85 @@ Material::~Material()
 }
 
 
-bool Material::LoadShaders( std::string vertFilename, std::string fragFilename )
+bool Material::LoadShaders(std::string vertFilename, std::string fragFilename)
 {
 	// OpenGL doesn't provide any functions for loading shaders from file
 
-	
-	std::ifstream vertFile( vertFilename );
-	char *vShaderText = NULL;
 
-	if( vertFile.is_open() )
+	std::ifstream vertFile(vertFilename);
+	char* vShaderText = NULL;
+
+	if (vertFile.is_open())
 	{
 		// Find out how many characters are in the file
-		vertFile.seekg (0, vertFile.end);
-		int length = (int) vertFile.tellg();
-		vertFile.seekg (0, vertFile.beg);
-		
+		vertFile.seekg(0, vertFile.end);
+		int length = (int)vertFile.tellg();
+		vertFile.seekg(0, vertFile.beg);
+
 		// Create our buffer
-		vShaderText = new char [length+1];
+		vShaderText = new char[length + 1];
 
 		// Transfer data from file to buffer
-		vertFile.read(vShaderText,length);
+		vertFile.read(vShaderText, length);
 
 		// Check it reached the end of the file
-		if( !vertFile.eof() )
+		if (!vertFile.eof())
 		{
 			vertFile.close();
-			std::cerr<<"WARNING: could not read vertex shader from file: "<<vertFilename<<std::endl;
+			std::cerr << "WARNING: could not read vertex shader from file: " << vertFilename << std::endl;
 			return false;
 		}
 
 		// Find out how many characters were actually read
-		length = (int) vertFile.gcount();
+		length = (int)vertFile.gcount();
 
 		// Needs to be NULL-terminated
 		vShaderText[length] = 0;
-		
+
 		vertFile.close();
 	}
 	else
 	{
-		std::cerr<<"WARNING: could not open vertex shader from file: "<<vertFilename<<std::endl;
+		std::cerr << "WARNING: could not open vertex shader from file: " << vertFilename << std::endl;
 		return false;
 	}
 
-	
-	std::ifstream fragFile( fragFilename );
-	char *fShaderText = NULL;
 
-	if( fragFile.is_open() )
+	std::ifstream fragFile(fragFilename);
+	char* fShaderText = NULL;
+
+	if (fragFile.is_open())
 	{
 		// Find out how many characters are in the file
-		fragFile.seekg (0, fragFile.end);
-		int length = (int) fragFile.tellg();
-		fragFile.seekg (0, fragFile.beg);
-		
+		fragFile.seekg(0, fragFile.end);
+		int length = (int)fragFile.tellg();
+		fragFile.seekg(0, fragFile.beg);
+
 		// Create our buffer
-		fShaderText = new char [length+1];
-		
+		fShaderText = new char[length + 1];
+
 		// Transfer data from file to buffer
-		fragFile.read(fShaderText,length);
-		
+		fragFile.read(fShaderText, length);
+
 		// Check it reached the end of the file
-		if( !fragFile.eof() )
+		if (!fragFile.eof())
 		{
 			fragFile.close();
-			std::cerr<<"WARNING: could not read fragment shader from file: "<<fragFilename<<std::endl;
+			std::cerr << "WARNING: could not read fragment shader from file: " << fragFilename << std::endl;
 			return false;
 		}
-		
+
 		// Find out how many characters were actually read
-		length = (int) fragFile.gcount();
-		
+		length = (int)fragFile.gcount();
+
 		// Needs to be NULL-terminated
 		fShaderText[length] = 0;
-		
+
 		fragFile.close();
 	}
 	else
 	{
-		std::cerr<<"WARNING: could not open fragment shader from file: "<<fragFilename<<std::endl;
+		std::cerr << "WARNING: could not open fragment shader from file: " << fragFilename << std::endl;
 		return false;
 	}
 
@@ -126,49 +144,49 @@ bool Material::LoadShaders( std::string vertFilename, std::string fragFilename )
 	_shaderProgram = glCreateProgram();
 
 	// Create the vertex shader
-	GLuint vShader = glCreateShader( GL_VERTEX_SHADER );
+	GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
 	// Give GL the source for it
-	glShaderSource( vShader, 1, &vShaderText, NULL );
+	glShaderSource(vShader, 1, &vShaderText, NULL);
 	// Delete buffer
-	delete [] vShaderText;
+	delete[] vShaderText;
 	// Compile the shader
-	glCompileShader( vShader );
+	glCompileShader(vShader);
 	// Check it compiled and give useful output if it didn't work!
-	if( !CheckShaderCompiled( vShader ) )
+	if (!CheckShaderCompiled(vShader))
 	{
-		std::cerr<<"ERROR: failed to compile vertex shader"<<std::endl;
+		std::cerr << "ERROR: failed to compile vertex shader" << std::endl;
 		return false;
 	}
 	// This links the shader to the program
-	glAttachShader( _shaderProgram, vShader );
+	glAttachShader(_shaderProgram, vShader);
 
 	// Same for the fragment shader
-	GLuint fShader = glCreateShader( GL_FRAGMENT_SHADER );
-	glShaderSource( fShader, 1, &fShaderText, NULL );
+	GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fShader, 1, &fShaderText, NULL);
 	// Delete buffer
-	delete [] fShaderText;
-	glCompileShader( fShader );
-	if( !CheckShaderCompiled( fShader ) )
+	delete[] fShaderText;
+	glCompileShader(fShader);
+	if (!CheckShaderCompiled(fShader))
 	{
-		std::cerr<<"ERROR: failed to compile fragment shader"<<std::endl;
+		std::cerr << "ERROR: failed to compile fragment shader" << std::endl;
 		return false;
 	}
-	glAttachShader( _shaderProgram, fShader );
+	glAttachShader(_shaderProgram, fShader);
 
 	// This makes sure the vertex and fragment shaders connect together
-	glLinkProgram( _shaderProgram );
+	glLinkProgram(_shaderProgram);
 	// Check this worked
 	GLint linked;
-	glGetProgramiv( _shaderProgram, GL_LINK_STATUS, &linked );
-	if ( !linked )
+	glGetProgramiv(_shaderProgram, GL_LINK_STATUS, &linked);
+	if (!linked)
 	{
 		GLsizei len;
-		glGetProgramiv( _shaderProgram, GL_INFO_LOG_LENGTH, &len );
+		glGetProgramiv(_shaderProgram, GL_INFO_LOG_LENGTH, &len);
 
-		GLchar* log = new GLchar[len+1];
-		glGetProgramInfoLog( _shaderProgram, len, &len, log );
+		GLchar* log = new GLchar[len + 1];
+		glGetProgramInfoLog(_shaderProgram, len, &len, log);
 		std::cerr << "ERROR: Shader linking failed: " << log << std::endl;
-		delete [] log;
+		delete[] log;
 
 		return false;
 	}
@@ -176,42 +194,47 @@ bool Material::LoadShaders( std::string vertFilename, std::string fragFilename )
 
 	// We will define matrices which we will send to the shader
 	// To do this we need to retrieve the locations of the shader's matrix uniform variables
-	glUseProgram( _shaderProgram );
-	_shaderModelMatLocation = glGetUniformLocation( _shaderProgram, "modelMat" );
-	_shaderInvModelMatLocation = glGetUniformLocation( _shaderProgram, "invModelMat" );
-	_shaderViewMatLocation = glGetUniformLocation( _shaderProgram, "viewMat" );
-	_shaderProjMatLocation = glGetUniformLocation( _shaderProgram, "projMat" );
-		
+	glUseProgram(_shaderProgram);
+	_shaderModelMatLocation = glGetUniformLocation(_shaderProgram, "modelMat");
+	_shaderInvModelMatLocation = glGetUniformLocation(_shaderProgram, "invModelMat");
+	_shaderViewMatLocation = glGetUniformLocation(_shaderProgram, "viewMat");
+	_shaderProjMatLocation = glGetUniformLocation(_shaderProgram, "projMat");
+
 	//blinn
-	_shaderDiffuseColLocation = glGetUniformLocation( _shaderProgram, "diffuseColour" );
-	_shaderEmissiveColLocation = glGetUniformLocation( _shaderProgram, "emissiveColour" );
-	_shaderSpecularColLocation = glGetUniformLocation( _shaderProgram, "specularColour" );
-	_shaderWSLightPosLocation = glGetUniformLocation( _shaderProgram, "worldSpaceLightPos" );
+	_shaderDiffuseColLocation = glGetUniformLocation(_shaderProgram, "diffuseColour");
+	_shaderEmissiveColLocation = glGetUniformLocation(_shaderProgram, "emissiveColour");
+	_shaderSpecularColLocation = glGetUniformLocation(_shaderProgram, "specularColour");
+	_shaderWSLightPosLocation = glGetUniformLocation(_shaderProgram, "worldSpaceLightPos");
 	//pbr
-	_shaderAlbedoColLocation = glGetUniformLocation( _shaderProgram, "albedo" );
+	_shaderAlbedoColLocation = glGetUniformLocation(_shaderProgram, "albedo");
 	_shaderMetallicColLocation = glGetUniformLocation(_shaderProgram, "metallic");
 	_shaderRoughnessColLocation = glGetUniformLocation(_shaderProgram, "roughness");
 	_shaderAoColLocation = glGetUniformLocation(_shaderProgram, "ao");
 
-	_shaderTex1SamplerLocation = glGetUniformLocation( _shaderProgram, "tex1" );
+	_shaderTex1SamplerLocation = glGetUniformLocation(_shaderProgram, "tex1");
+	_shaderAlbedoMapSamplerLocation = glGetUniformLocation(_shaderProgram, "albedoMap");
+	_shaderMetallicMapSamplerLocation = glGetUniformLocation(_shaderProgram, "metallicMap");
+	_shaderRoughnessMapSamplerLocation = glGetUniformLocation(_shaderProgram, "roughnessMap");
+	_shaderAoMapSamplerLocation = glGetUniformLocation(_shaderProgram, "aoMap");
+
 
 	return true;
 }
 
-bool Material::CheckShaderCompiled( GLint shader )
+bool Material::CheckShaderCompiled(GLint shader)
 {
 	GLint compiled;
-	glGetShaderiv( shader, GL_COMPILE_STATUS, &compiled );
-	if ( !compiled )
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+	if (!compiled)
 	{
 		GLsizei len;
-		glGetShaderiv( shader, GL_INFO_LOG_LENGTH, &len );
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
 
 		// OpenGL will store an error message as a string that we can retrieve and print
-		GLchar* log = new GLchar[len+1];
-		glGetShaderInfoLog( shader, len, &len, log );
+		GLchar* log = new GLchar[len + 1];
+		glGetShaderInfoLog(shader, len, &len, log);
 		std::cerr << "ERROR: Shader compilation failed: " << log << std::endl;
-		delete [] log;
+		delete[] log;
 
 		return false;
 	}
@@ -219,14 +242,14 @@ bool Material::CheckShaderCompiled( GLint shader )
 }
 
 
-unsigned int Material::LoadTexture( std::string filename )
+unsigned int Material::LoadTexture(std::string filename)
 {
 	// Load SDL surface
-	SDL_Surface *image = SDL_LoadBMP( filename.c_str() );
+	SDL_Surface* image = SDL_LoadBMP(filename.c_str());
 
-	if( !image ) // Check it worked
+	if (!image) // Check it worked
 	{
-		std::cerr<<"WARNING: could not load BMP image: "<<filename<<std::endl;
+		std::cerr << "WARNING: could not load BMP image: " << filename << std::endl;
 		return 0;
 	}
 
@@ -246,14 +269,14 @@ unsigned int Material::LoadTexture( std::string filename )
 	// By default, OpenGL min filter will use mipmaps
 	// We therefore either need to tell it to use linear or generate a mipmap
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	
+
 	// SDL loads images in BGR order
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image->w, image->h, 0, GL_BGR, GL_UNSIGNED_BYTE, image->pixels);
 
 	//glGenerateMipmap(GL_TEXTURE_2D);
 
 	SDL_FreeSurface(image);
-	
+
 	//glBindTexture(GL_TEXTURE_2D, 0);
 
 
@@ -263,34 +286,37 @@ unsigned int Material::LoadTexture( std::string filename )
 
 
 
-void Material::SetMatrices(glm::mat4 &modelMatrix, glm::mat4 &invModelMatrix, glm::mat4 &viewMatrix, glm::mat4 &projMatrix)
+void Material::SetMatrices(glm::mat4& modelMatrix, glm::mat4& invModelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix)
 {
-	glUseProgram( _shaderProgram );
-		// Send matrices and uniforms
-	glUniformMatrix4fv(_shaderModelMatLocation, 1, GL_FALSE, glm::value_ptr(modelMatrix) );
-	glUniformMatrix4fv(_shaderInvModelMatLocation, 1, GL_TRUE, glm::value_ptr(invModelMatrix) );
-	glUniformMatrix4fv(_shaderViewMatLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix) );
-	glUniformMatrix4fv(_shaderProjMatLocation, 1, GL_FALSE, glm::value_ptr(projMatrix) );
+	glUseProgram(_shaderProgram);
+	// Send matrices and uniforms
+	glUniformMatrix4fv(_shaderModelMatLocation, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	glUniformMatrix4fv(_shaderInvModelMatLocation, 1, GL_TRUE, glm::value_ptr(invModelMatrix));
+	glUniformMatrix4fv(_shaderViewMatLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+	glUniformMatrix4fv(_shaderProjMatLocation, 1, GL_FALSE, glm::value_ptr(projMatrix));
 }
-	
+
 
 void Material::Apply()
 {
-	glUseProgram( _shaderProgram );
+	glUseProgram(_shaderProgram);
 
-	glUniform4fv( _shaderWSLightPosLocation, 1, glm::value_ptr(_lightPosition) );
-	
+	glUniform4fv(_shaderWSLightPosLocation, 1, glm::value_ptr(_lightPosition));
+
 	//blinn
-	glUniform3fv( _shaderEmissiveColLocation, 1, glm::value_ptr(_emissiveColour) );
-	glUniform3fv( _shaderDiffuseColLocation, 1, glm::value_ptr(_diffuseColour) );
-	glUniform3fv( _shaderSpecularColLocation, 1, glm::value_ptr(_specularColour) );
+	glUniform3fv(_shaderEmissiveColLocation, 1, glm::value_ptr(_emissiveColour));
+	glUniform3fv(_shaderDiffuseColLocation, 1, glm::value_ptr(_diffuseColour));
+	glUniform3fv(_shaderSpecularColLocation, 1, glm::value_ptr(_specularColour));
+	
 	//pbr
 	glUniform3fv(_shaderAlbedoColLocation, 1, glm::value_ptr(_albedo));
-	glUniform3fv(_shaderMetallicColLocation, 1, &_metallic);
-	glUniform3fv(_shaderSpecularColLocation, 1, &_roughness);
-	glUniform3fv(_shaderAoColLocation, 1, &_ao);
+	glUniform1fv(_shaderMetallicColLocation, 1, &_metallic);
+	glUniform1fv(_shaderRoughnessColLocation, 1, &_roughness);
+	glUniform1fv(_shaderAoColLocation, 1, &_ao);
+
+
 
 	glActiveTexture(GL_TEXTURE0);
-	glUniform1i(_shaderTex1SamplerLocation,0);
+	glUniform1i(_shaderTex1SamplerLocation, 0);
 	glBindTexture(GL_TEXTURE_2D, _texture1);
 }

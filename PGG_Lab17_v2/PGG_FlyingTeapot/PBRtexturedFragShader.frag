@@ -9,16 +9,22 @@ in vec2 texCoord;
 
 //input uniform data - pbr parameters
 uniform vec3 lightColour = {23.47, 21.31, 20.79};
-uniform vec3 albedo;
-uniform float metallic;
-uniform float roughness;
-uniform float ao;
-uniform float alpha = 1.0;
+uniform sampler2D albedoMap;
+uniform sampler2D normalMap;
+uniform sampler2D metallicMap;
+uniform sampler2D roughnessMap;
+uniform sampler2D aoMap;
+uniform float alpha = 0.3;
 
 //constant PI
 const float PI = 3.14159265359;
 
 out vec4 fragColour;
+
+uniform sampler2D tex1;
+
+// Normal from map
+vec3  getNormalFromNormalMap();
 
 //functions for calculating BRDF using the Cook-Torrance model
 float DistributionGGX(vec3 N, vec3 H, float roughness);
@@ -28,11 +34,22 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0);
 
 void main()
 {
+	vec3 albedo     = pow(texture(albedoMap, texCoord).rgb,vec3(2.2));
+	vec3 vNormalV   = getNormalFromNormalMap();
+	float metallic  = texture(metallicMap, texCoord).r;
+	float roughness = texture(roughnessMap, texCoord).r;
+	float ao        = texture(aoMap, texCoord).r;
+
+
+
 	//normal units
 	vec3 normal = normalize(vNormalV);
 
 	//eye to surface
 	vec3 viewDir = normalize(eyeSpaceLightPosV -eyeSpaceVertPosV );    //eyeSpaceLightPosV -eyeSpaceVertPosV 
+
+	// retrieve texture colour
+	vec3 texColour = vec3(texture(tex1,vec2(texCoord.x,1-texCoord.y)));
 
 	//reflectance
 	vec3 F0 = vec3(0.04); // plastic
@@ -81,7 +98,7 @@ void main()
 
 	colour = colour / (colour +vec3(1.0));
 	//gamma
-	colour = pow(colour, vec3(1.0/3.0)); //2.2  
+	colour = pow(colour, vec3(1.0/2.2));  
 
 	fragColour = vec4(colour, alpha);
 }
@@ -124,4 +141,20 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+vec3 getNormalFromNormalMap()
+{
+	vec3 tangentNormal = texture(normalMap, texCoord).xyz * 2.0 -1.0;
+	vec3 Q1 = dFdx(eyeSpaceVertPosV);
+	vec3 Q2 = dFdy(eyeSpaceVertPosV);
+	vec2 st1 = dFdx(texCoord);
+	vec2 st2 = dFdy(texCoord);
+
+	vec3 T = normalize(Q1*st2.t - Q2*st1.t);
+	vec3 N = normalize(vNormalV);
+	vec3 B = -normalize(cross(N,T));
+	mat3 TBN = mat3(T,B,N);
+
+	return normalize(TBN * tangentNormal);
 }

@@ -41,9 +41,23 @@ public:
 protected:
 
 	// Currently one object, this could be a list of objects!
-	GameObject *_model;
+	GameObject *_teapotR1;
+	GameObject* _teapotR2;
+	GameObject* _teapotR3;
+	GameObject* _teapotR4;
+	GameObject* _teapotR5;
+	GameObject* _teapotM1;
+	GameObject* _teapotM2;
+	GameObject* _teapotM3;
+	GameObject* _teapotM4;
+	GameObject* _teapotM5;
 
-	
+	GameObject* _teapotEx1;
+	GameObject* _teapotEx2;
+	GameObject* _teapotEx3;
+	GameObject* _teapotEx4;
+	GameObject* _teapotEx5;
+
 	Player *_player;
 
 		

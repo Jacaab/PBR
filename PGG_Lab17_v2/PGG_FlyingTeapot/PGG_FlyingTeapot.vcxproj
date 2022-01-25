@@ -168,6 +168,7 @@
   <ItemGroup>
     <None Include="FragShader.frag" />
     <None Include="PBRfragShader.frag" />
+    <None Include="PBRtexturedFragShader.frag" />
     <None Include="PBRvertShader.vert" />
     <None Include="VertShader.vert" />
   </ItemGroup>

@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 	// These are controlled by the states of key presses
 	// They will be used to control the camera
 	bool cmdRotateLeft = false, cmdRotateRight = false, cmdRotateUp = false, cmdRotateDown = false;
-	bool cmdRollLeft = false, cmdRollRight = false, cmdPitchUp = false, cmdPitchDown = false, cmdThrustUp = false, cmdThrustDown = false;
+	bool cmdPanLeft = false, cmdPanRight = false, cmdPanForward = false, cmdPanBackward = false, cmdPanUp = false, cmdPanDown = false;
 
 	
 	Player *mainPlayer = myScene.GetPlayer();
@@ -206,26 +206,22 @@ int main(int argc, char *argv[])
 					cmdRotateRight = true;
 					break;
 				case SDLK_a:
-					cmdRollLeft = true;
+					cmdPanLeft = true;
 					break;
 				case SDLK_d:
-					cmdRollRight = true;
+					cmdPanRight = true;
 					break;
 				case SDLK_w:
-					cmdPitchUp = true;
+					cmdPanForward = true;
 					break;
 				case SDLK_s:
-					cmdPitchDown = true;
-					break;
-				case SDLK_PAGEUP:
-					cmdThrustUp = true;
-					break;
-				case SDLK_PAGEDOWN:
-					cmdThrustDown = true;
+					cmdPanBackward = true;
 					break;
 				case SDLK_SPACE:
-					
-						//mainPlayer->ClearRotations();
+					cmdPanUp = true;
+					break;
+				case SDLK_LCTRL:
+					cmdPanDown = true;
 					break;
 				}
 				break;
@@ -249,23 +245,22 @@ int main(int argc, char *argv[])
 					cmdRotateRight = false;
 					break;
 				case SDLK_a:
-					cmdRollLeft = false;
+					cmdPanLeft = false;
 					break;
 				case SDLK_d:
-					cmdRollRight = false;
+					cmdPanRight = false;
 					break;
 				case SDLK_w:
-					cmdPitchUp = false;
+					cmdPanForward = false;
 					break;
 				case SDLK_s:
-					cmdPitchDown = false;
+					cmdPanBackward = false;
 					break;
-				case SDLK_PAGEUP:
-					cmdThrustUp = false;
+				case SDLK_SPACE:
+					cmdPanUp = false;
 					break;
-				case SDLK_PAGEDOWN:
-					cmdThrustDown = false;
-					break;
+				case SDLK_LCTRL:
+					cmdPanDown = false;
 				}
 				break;
 			}
@@ -306,40 +301,34 @@ int main(int argc, char *argv[])
 		}
 
 
-		if( cmdRollLeft &! cmdRollRight )
+		if( cmdPanLeft &! cmdPanRight )
 		{
-			mainPlayer->ChangeRoll( -1.0f );
+			mainPlayer->SetPosition(mainPlayer->GetPosition().x, mainPlayer->GetPosition().y, mainPlayer->GetPosition().z - 1 * deltaTs);
 		}
-		else if( cmdRollRight &! cmdRollLeft )
+		else if(cmdPanRight &! cmdPanLeft )
 		{
-			mainPlayer->ChangeRoll( 1.0f );
-		}
-		else
-		{
-			mainPlayer->ChangeRoll( 0.0f );
+			mainPlayer->SetPosition(mainPlayer->GetPosition().x, mainPlayer->GetPosition().y, mainPlayer->GetPosition().z + 1 * deltaTs);
 		}
 		
-		if( cmdPitchUp &! cmdPitchDown )
+		if( cmdPanUp &! cmdPanDown )
 		{
-			mainPlayer->ChangePitch( 1.0f );
+			mainPlayer->SetPosition(mainPlayer->GetPosition().x, mainPlayer->GetPosition().y + 1 * deltaTs, mainPlayer->GetPosition().z);
 		}
-		else if( cmdPitchDown &! cmdPitchUp )
+		else if(cmdPanDown &!cmdPanUp)
 		{
-			mainPlayer->ChangePitch(-1.0f );
-		}
-		else
-		{
-			mainPlayer->ChangePitch( 0.0f );
+			mainPlayer->SetPosition(mainPlayer->GetPosition().x, mainPlayer->GetPosition().y - 1 * deltaTs, mainPlayer->GetPosition().z);
 		}
 
-		if( cmdThrustUp &! cmdThrustDown )
+		if( cmdPanForward &! cmdPanBackward )
 		{
-			mainPlayer->ChangeThrust(1.0f*deltaTs);
+			mainPlayer->SetPosition(mainPlayer->GetPosition().x + 1 * deltaTs, mainPlayer->GetPosition().y, mainPlayer->GetPosition().z);
 		}
-		else if( cmdThrustDown &! cmdThrustUp )
+		else if( cmdPanBackward &! cmdPanForward )
 		{
-			mainPlayer->ChangeThrust(-1.0f*deltaTs);
+			mainPlayer->SetPosition(mainPlayer->GetPosition().x - 1 * deltaTs, mainPlayer->GetPosition().y, mainPlayer->GetPosition().z);
 		}
+
+		//camerapan
 
 		// Update the scene
 		myScene.Update( deltaTs );

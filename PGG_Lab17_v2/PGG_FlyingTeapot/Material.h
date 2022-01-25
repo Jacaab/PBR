@@ -36,8 +36,12 @@ public:
 
 	// Sets texture
 	// This applies to ambient, diffuse and specular colours
-	// If you want textures for anything else, you'll need to do that yourself ;)
 	bool SetTexture( std::string filename ) {_texture1 = LoadTexture(filename); return _texture1>0;}
+	bool SetAlbedoMap(std::string filename) { _albedoMap = LoadTexture(filename); return _albedoMap > 0; }
+	bool SetMetallicMap(std::string filename) { _metallicMap = LoadTexture(filename); return _metallicMap > 0; }
+	bool SetRoughnessMap(std::string filename) { _roughnessMap = LoadTexture(filename); return _roughnessMap > 0; }
+	bool SetAOMap(std::string filename) { _aoMap = LoadTexture(filename); return _aoMap > 0; }
+
 
 	// Sets the material, applying the shaders
 	void Apply();
@@ -61,11 +65,14 @@ protected:
 	int _shaderDiffuseColLocation, _shaderEmissiveColLocation, _shaderSpecularColLocation;
 	//pbr
 	int _shaderAlbedoColLocation, _shaderMetallicColLocation, _shaderRoughnessColLocation, _shaderAoColLocation;
+	//textured pbr
+	int _shaderAlbedoMapSamplerLocation, _shaderMetallicMapSamplerLocation, _shaderRoughnessMapSamplerLocation, _shaderAoMapSamplerLocation;
+	
 	//light
 	int _shaderWSLightPosLocation;
 	
 	int _shaderTex1SamplerLocation;
-
+	
 	// Local store of material properties to be sent to the shader
 	glm::vec3 _emissiveColour, _diffuseColour, _specularColour, _albedo;
 	float _metallic, _roughness, _ao;
@@ -76,11 +83,8 @@ protected:
 	unsigned int LoadTexture( std::string filename );
 	
 	// OpenGL handle for the texture
-	unsigned int _texture1;
+	unsigned int _texture1, _albedoMap, _metallicMap, _roughnessMap, _aoMap;
 
 };
-
-
-
 
 #endif
